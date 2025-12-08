@@ -21,7 +21,7 @@
 #ifndef _sh1106_h
 #define _sh1106_h
 
-#include <display/ssd1306device.h>
+#include <display/ssd1306.h>
 
 // Low-level SH1106 OLED driver derived from the SSD1306 implementation.
 class CSH1106 : public CSSD1306
