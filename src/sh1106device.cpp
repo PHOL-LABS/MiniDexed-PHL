@@ -117,13 +117,13 @@ constexpr auto FontDouble = Font<FONT_SIZE, decltype(DoubleColumn)>(Font6x8, Dou
 
 CSH1106Device::CSH1106Device (unsigned nWidth, unsigned nHeight,
 			      CI2CMaster *pI2CMaster, u8 nAddress,
-			      bool rotated, bool mirrored)
+			      unsigned nRotate, bool mirrored)
 :	CCharDevice (SH1106_COLUMNS, SH1106_ROWS),
 	m_nWidth (nWidth),
 	m_nHeight (nHeight),
 	m_pI2CMaster (pI2CMaster),
 	m_nAddress (nAddress),
-	m_bRotated (rotated),
+	m_nRotate ((nRotate == 90 || nRotate == 180 || nRotate == 270) ? nRotate : 0),
 	m_bMirrored (mirrored),
 	m_FrameBuffers{{0x40, {0}}, {0x40, {0}}},
 	m_nCurrentFrameBuffer(0)
@@ -148,8 +148,8 @@ boolean CSH1106Device::Initialize (void)
 	//            normal    inverted
 	// normal     A1 C8       A0 C0
 	// mirrored   A0 C8       A1 C0
-	const u8 nSegRemap        = (m_bRotated && !m_bMirrored) || (!m_bRotated && m_bMirrored) ? 0xA0 : 0xA1;
-	const u8 nCOMScanDir      = m_bRotated ? 0xC0 : 0xC8;
+	const u8 nSegRemap        = m_bMirrored ? 0xA0 : 0xA1;
+	const u8 nCOMScanDir      = 0xC8;
 
 	const u8 InitSequence[] =
 	{
@@ -206,6 +206,49 @@ void CSH1106Device::WriteCommand(u8 nCommand) const
 	m_pI2CMaster->Write(m_nAddress, Buffer, sizeof(Buffer));
 }
 
+void CSH1106Device::PutPixel(u8 *pFrameBuffer, unsigned nX, unsigned nY, bool bSet) const
+{
+	if (nX >= m_nWidth || nY >= m_nHeight)
+		return;
+
+	u8 &nByte = pFrameBuffer[(nY / 8) * m_nWidth + nX];
+	const u8 nMask = 1 << (nY % 8);
+
+	if (bSet)
+		nByte |= nMask;
+	else
+		nByte &= ~nMask;
+}
+
+void CSH1106Device::PutRotatedPixel(u8 *pFrameBuffer, unsigned nX, unsigned nY, bool bSet) const
+{
+	switch (m_nRotate)
+	{
+	case 90:
+		PutPixel(pFrameBuffer, nY / 2, (m_nWidth - 1 - nX) / 2, bSet);
+		break;
+
+	case 180:
+		PutPixel(pFrameBuffer, m_nWidth - 1 - nX, m_nHeight - 1 - nY, bSet);
+		break;
+
+	case 270:
+		PutPixel(pFrameBuffer, (m_nHeight - 1 - nY) / 2, nX / 2, bSet);
+		break;
+
+	case 0:
+	default:
+		PutPixel(pFrameBuffer, nX, nY, bSet);
+		break;
+	}
+}
+
+void CSH1106Device::PutColumn(u8 *pFrameBuffer, unsigned nX, unsigned nPageY, u8 nColumn) const
+{
+	for (unsigned nBit = 0; nBit < 8; ++nBit)
+		PutRotatedPixel(pFrameBuffer, nX, nPageY * 8 + nBit, nColumn & (1 << nBit));
+}
+
 void CSH1106Device::WriteFrameBuffer(bool bForceFullUpdate) const
 {
 	// Reset start line
@@ -248,7 +291,6 @@ void CSH1106Device::SwapFrameBuffers()
 
 void CSH1106Device::DrawChar(char chChar, u8 nCursorX, u8 nCursorY, bool bInverted, bool bDoubleWidth)
 {
-	const size_t nRowOffset    = nCursorY * m_nWidth * 2;
 	const size_t nColumnOffset = nCursorX * (bDoubleWidth ? 12 : 6) + 4;
 	u8* pFrameBuffer           = m_FrameBuffers[m_nCurrentFrameBuffer].FrameBuffer;
 
@@ -270,15 +312,12 @@ void CSH1106Device::DrawChar(char chChar, u8 nCursorX, u8 nCursorY, bool bInvert
 		// Shift down by 2 pixels
 		nFontColumn <<= 2;
 
-		// Upper half of font
-		const size_t nOffset = nRowOffset + nColumnOffset + (bDoubleWidth ? i * 2 : i);
-
-		pFrameBuffer[nOffset] = nFontColumn & 0xFF;
-		pFrameBuffer[nOffset + m_nWidth] = (nFontColumn >> 8) & 0xFF;
+		PutColumn(pFrameBuffer, nColumnOffset + (bDoubleWidth ? i * 2 : i), nCursorY * 2, nFontColumn & 0xFF);
+		PutColumn(pFrameBuffer, nColumnOffset + (bDoubleWidth ? i * 2 : i), nCursorY * 2 + 1, (nFontColumn >> 8) & 0xFF);
 		if (bDoubleWidth)
 		{
-			pFrameBuffer[nOffset + 1] = pFrameBuffer[nOffset];
-			pFrameBuffer[nOffset + m_nWidth + 1] = pFrameBuffer[nOffset + m_nWidth];
+			PutColumn(pFrameBuffer, nColumnOffset + i * 2 + 1, nCursorY * 2, nFontColumn & 0xFF);
+			PutColumn(pFrameBuffer, nColumnOffset + i * 2 + 1, nCursorY * 2 + 1, (nFontColumn >> 8) & 0xFF);
 		}
 	}
 }

@@ -155,7 +155,7 @@ void CConfig::Load (void)
         m_nSH1106LCDI2CAddress = m_Properties.GetNumber ("SH1106LCDI2CAddress", 0);
         m_nSH1106LCDWidth = m_Properties.GetNumber ("SH1106LCDWidth", 128);
         m_nSH1106LCDHeight = m_Properties.GetNumber ("SH1106LCDHeight", 64);
-        m_bSH1106LCDRotate = m_Properties.GetNumber ("SH1106LCDRotate", 0) != 0;
+        m_nSH1106LCDRotate = m_Properties.GetNumber ("SH1106LCDRotate", 0);
         m_bSH1106LCDMirror = m_Properties.GetNumber ("SH1106LCDMirror", 0) != 0;
 
 	m_nSPIBus = m_Properties.GetNumber ("SPIBus", SPI_INACTIVE);  // Disabled by default
@@ -529,9 +529,9 @@ unsigned CConfig::GetSH1106LCDHeight (void) const
         return m_nSH1106LCDHeight;
 }
 
-bool CConfig::GetSH1106LCDRotate (void) const
+unsigned CConfig::GetSH1106LCDRotate (void) const
 {
-        return m_bSH1106LCDRotate;
+        return m_nSH1106LCDRotate;
 }
 
 bool CConfig::GetSH1106LCDMirror (void) const

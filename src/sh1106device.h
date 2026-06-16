@@ -37,11 +37,11 @@ public:
 	/// \param nHeight Display size in pixels (32 or 64)
 	/// \param pI2CMaster I2C master to be used
 	/// \param nAddress I2C slave address of the display controller
-	/// \param rotated Display rotated?
+	/// \param nRotate Display rotation in degrees (0, 90, 180, or 270)
 	/// \param mirrored Display mirrored?
 	CSH1106Device (unsigned nWidth, unsigned nHeight,
 		       CI2CMaster *pI2CMaster, u8 nAddress,
-		       bool rotated=false, bool mirrored=false);
+		       unsigned nRotate=0, bool mirrored=false);
 	~CSH1106Device (void);
 
 	/// \return Operation successful?
@@ -70,7 +70,7 @@ private:
 	CI2CMaster *m_pI2CMaster;
 	u8 m_nAddress;
 	bool m_bBacklightEnabled;
-	bool m_bRotated;
+	unsigned m_nRotate;
 	bool m_bMirrored;
 
 	struct TFrameBufferUpdatePacket
@@ -81,6 +81,9 @@ private:
 	PACKED;
 
 	void WriteCommand(u8 nCommand) const;
+	void PutPixel(u8 *pFrameBuffer, unsigned nX, unsigned nY, bool bSet) const;
+	void PutRotatedPixel(u8 *pFrameBuffer, unsigned nX, unsigned nY, bool bSet) const;
+	void PutColumn(u8 *pFrameBuffer, unsigned nX, unsigned nPageY, u8 nColumn) const;
 	void WriteFrameBuffer(bool bForceFullUpdate = false) const;
 	void SwapFrameBuffers();
 
