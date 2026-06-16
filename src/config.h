@@ -159,7 +159,7 @@ public:
         unsigned GetSH1106LCDI2CAddress (void) const;
         unsigned GetSH1106LCDWidth (void) const;
         unsigned GetSH1106LCDHeight (void) const;
-        bool     GetSH1106LCDRotate (void) const;
+        unsigned GetSH1106LCDRotate (void) const;
         bool     GetSH1106LCDMirror (void) const;
 
 	// SPI support
@@ -320,7 +320,7 @@ private:
         unsigned m_nSH1106LCDI2CAddress;
         unsigned m_nSH1106LCDWidth;
         unsigned m_nSH1106LCDHeight;
-        bool     m_bSH1106LCDRotate;
+        unsigned m_nSH1106LCDRotate;
         bool     m_bSH1106LCDMirror;
 
 	unsigned m_nSPIBus;
